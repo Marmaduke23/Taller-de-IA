@@ -93,19 +93,19 @@ def predict_secuence(model_path, list_images, class_names, step, device=None):
         accumulator[cls] += prob
 
     # Mostrar tabla de results
-    print("\nTabla de resultados:")
-    print("{:<50} {:<20} {:<12}".format("Imagen", "Predicción", "Probabilidad"))
-    print("-"*85)
-    for r in results:
-        print("{:<50} {:<20} {:<12}".format(
-            r['image_path'],
-            r['predicted_class'],
-            f"{r['probability']*100:.2f}%"
-        ))
+    #print("\nTabla de resultados:")
+    #print("{:<50} {:<20} {:<12}".format("Imagen", "Predicción", "Probabilidad"))
+    #print("-"*85)
+    #for r in results:
+        #print("{:<50} {:<20} {:<12}".format(
+            #r['image_path'],
+            #r['predicted_class'],
+            #f"{r['probability']*100:.2f}%"
+        #))
 
     # Clase con mayor suma
     final_class = max(accumulator, key=accumulator.get)
-    print("Predicción agregada:", final_class)
+    #print("Predicción agregada:", final_class)
     return final_class # debería devolver tambien la probabilidad total o promedio del fragmento
 
 
@@ -157,6 +157,21 @@ results = predict_video_frames(
     step = 2,
     ratio = 30
 )
+
+
+
+# Por lo que da la otra funcion el ratio es 58 aprox
+results = predict_video_frames(
+    model_path='resnet18_freezed.pth',
+    imgs_dir='videos/video1/frames',
+    class_names=class_names,
+    step = 2,
+    ratio = 58*2
+)
+
+#demoró 2-3 minutos aprox
+
+
 
 # Falta hacer una funcion que diga de que segundo a que segundo dura cada movmiento
 # (basta con considerar los FPS por segundo.. creo)
