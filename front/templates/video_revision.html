@@ -89,25 +89,60 @@
 
 {% block javascript %}
 <script>
-function fetchClipSegments(){
-	
-}
-
-
-// Ejemplo de clips generados por IA
-var plays = [
-    {"movimiento": "backhand", "tiempo_inicio": "00:00:00.00", "tiempo_fin": "00:00:01.00"},
-    {"movimiento": "ready_position", "tiempo_inicio": "00:00:03.00", "tiempo_fin": "00:00:05.00"}
-];
-
-let currentClipIndex = 0;
+var plays = [];
+var currentClipIndex = 0;
 const video = document.getElementById('videoPlayer');
-const clipBar = document.getElementById('clip-bar');
+const clipBar = document.getElementById('clip-nav'); // barra de clips
 
 // Convierte HH:MM:SS.ms a segundos
 function hmsToSeconds(hms) {
     const parts = hms.split(':');
     return parseFloat(parts[0])*3600 + parseFloat(parts[1])*60 + parseFloat(parts[2]);
+}
+
+// Convierte segundos a HH:MM:SS.xx
+function formatTime(segundos) {
+    const date = new Date(null);
+    date.setSeconds(segundos);
+    const hh = String(date.getUTCHours()).padStart(2, '0');
+    const mm = String(date.getUTCMinutes()).padStart(2, '0');
+    const ss = String(date.getUTCSeconds()).padStart(2, '0');
+    const cs = String(Math.floor((segundos % 1) * 100)).padStart(2, '0');
+    return `${hh}:${mm}:${ss}.${cs}`;
+}
+
+// Fetch para obtener clips desde la API
+function fetchClipSegments(videoFile) {
+    const formData = new FormData();
+    formData.append('file', videoFile);
+
+    return fetch('http://127.0.0.1:7003/tennis-score/app-ia/video', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Error en la petición: ' + response.status);
+        return response.json();
+    })
+    .then(data => {
+        if (data && Array.isArray(data)) {
+            plays = data.map(item => ({
+                movimiento: item.type || item.movimiento || "desconocido",
+                tiempo_inicio: formatTime(item.start),
+                tiempo_fin: formatTime(item.end)
+            }));
+            console.log('Plays:', plays);
+        } else {
+            console.warn('Respuesta inesperada:', data);
+        }
+    });
+}
+
+// Convierte URL de video a File/Blob para enviar a la API
+async function fetchVideoFile(url) {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new File([blob], url.split('/').pop(), { type: blob.type });
 }
 
 // Función para reproducir clip actual
@@ -131,6 +166,7 @@ function playCurrentClip() {
         if (video.currentTime >= end) video.pause();
     };
 }
+
 // Cambiar clip (delta: +1 siguiente, -1 anterior)
 function changeClip(delta) {
     if (!plays.length) return;
@@ -142,7 +178,7 @@ function changeClip(delta) {
     playCurrentClip();
 }
 
-// Manejar flechas
+// Manejar flechas del teclado
 document.addEventListener('keydown', function(event) {
     if(event.key === "ArrowRight") changeClip(1);
     if(event.key === "ArrowLeft") changeClip(-1);
@@ -150,19 +186,14 @@ document.addEventListener('keydown', function(event) {
 
 // Función de carga de video
 function loadVideo(videoUrl, filename, event) {
-    const videoSource = document.getElementById('videoSource');
     const placeholder = document.getElementById('placeholder');
     const videoDetails = document.getElementById('video-details');
-
-    // Actualizar fuente
-    video.src = videoUrl;
-    video.load();
 
     // Mostrar tabla y ocultar placeholder
     placeholder.style.display = 'none';
     videoDetails.style.display = 'block';
 
-    // Actualizar nombre de video
+    // Actualizar nombre de video y estado IA
     document.getElementById('detail-filename').textContent = filename;
     document.getElementById('detail-ai').textContent = 'Analizando...';
 
@@ -170,27 +201,38 @@ function loadVideo(videoUrl, filename, event) {
     document.querySelectorAll('.video-item').forEach(item => item.classList.remove('active'));
     event.currentTarget.classList.add('active');
 
-    // Reiniciar índice y reproducir primer clip
+    // Limpiar clips anteriores
+    plays = [];
     currentClipIndex = 0;
-    if(plays.length) playCurrentClip();
+    renderClipBar(); // vacía la barra mientras llegan los datos
 
-    // Generar barra de clips
-    renderClipBar();
+    // Cargar el video
+    video.src = videoUrl;
+    video.load();
+
+    // Obtener archivo desde URL y enviar a API
+    fetchVideoFile(videoUrl)
+        .then(videoFile => fetchClipSegments(videoFile))
+        .then(() => {
+            if (plays.length) {
+                playCurrentClip(); // reproducir primer clip
+                document.getElementById('detail-ai').textContent = 'Analizado ✔️';
+                renderClipBar(); // renderiza clips
+            } else {
+                document.getElementById('detail-ai').textContent = 'No se detectaron jugadas';
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById('detail-ai').textContent = 'Error al analizar el video ❌';
+        });
 }
 
 // Renderiza barra de clips
 function renderClipBar() {
-    clipBar.innerHTML = '';
-    plays.forEach((clip, index) => {
-        const clipDiv = document.createElement('div');
-        clipDiv.className = 'clip-item';
-        clipDiv.title = clip.movimiento;
-        clipDiv.onclick = () => {
-            currentClipIndex = index;
-            playCurrentClip();
-        };
-        clipBar.appendChild(clipDiv);
-    });
+    const clipContainer = document.getElementById('clip-nav');
+    // Solo los botones y label ya existen, así que podemos actualizar si quieres agregar items visuales
+    // Ejemplo simple: se podría colorear clips activos, etc.
 }
 
 // Guardar comentarios
