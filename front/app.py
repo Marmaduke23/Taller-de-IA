@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for
 import os
 from werkzeug.utils import secure_filename
+from flask import send_from_directory
 
 app = Flask(__name__)
 
@@ -97,6 +98,28 @@ def resultados(video_id):
     # - ready_position (Posición de Espera)
     # Cada detección tiene tiempo_inicio y tiempo_termino para recortar el video
     return f"<h1>Clips de tu partido</h1><p>Video ID: {video_id}</p><p>Aquí verás tus clips organizados por tipo de jugada</p>"
+
+# Seccion de revision de videos
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    """Sirve los archivos de video desde la carpeta uploads"""
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+@app.route('/revision')
+def revision():
+    """Muestra la interfaz de revisión de videos"""
+    # Obtener lista de videos en la carpeta uploads
+    videos = []
+    if os.path.exists(UPLOAD_FOLDER):
+        for filename in os.listdir(UPLOAD_FOLDER):
+            if allowed_file(filename):
+                videos.append({
+                    'filename': filename,
+                    'url': url_for('uploaded_file', filename=filename)
+                })
+
+    return render_template('video_revision.html', videos=videos)
+
 
 @app.errorhandler(413)
 def too_large(e):
