@@ -64,4 +64,5 @@ def procesar_video(video_path, guardar_cada: int = 1):
         "carpeta_frames": frames_dir
     }
 
-#info = procesar_video("videos/video1/prueba1.mp4", guardar_cada=1)
+#info = procesar_video("videos/video1/prueba1.mp4", guardar_cada=2)
+#print(info)
