@@ -1,0 +1,6 @@
+# Ignorar todos los archivos de video
+*
+
+# Pero no ignorar este archivo
+!.gitignore
+

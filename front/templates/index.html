@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+
+{% block title %}Analiza tus Partidos - Tennis Score{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-content">
+        <h1 class="hero-title">Mejora tu juego con<br><span class="hero-highlight">Inteligencia Artificial</span></h1>
+        <p class="hero-description">
+            Sube videos de tus partidos y recibe clips automáticos de cada jugada clave: 
+            Saque, Derecha, Revés y Posición de Espera
+        </p>
+        <div class="hero-features">
+            <div class="hero-feature">
+                <span class="hero-feature-icon">⚡</span>
+                <span>Análisis automático</span>
+            </div>
+            <div class="hero-feature">
+                <span class="hero-feature-icon">🎯</span>
+                <span>Clips por jugada</span>
+            </div>
+            <div class="hero-feature">
+                <span class="hero-feature-icon">📊</span>
+                <span>Mejora tu técnica</span>
+            </div>
+        </div>
+        <a href="#upload-form" class="hero-cta">
+            <span>Subir mi primer partido</span>
+            <span class="hero-cta-icon">→</span>
+        </a>
+    </div>
+    <div class="hero-decoration">
+        <div class="tennis-ball ball-1">🎾</div>
+        <div class="tennis-ball ball-2">🎾</div>
+        <div class="tennis-ball ball-3">🎾</div>
+        <div class="tennis-ball ball-4">🎾</div>
+    </div>
+</section>
+
+<div class="container">
+    <div class="form-container" id="upload-form">
+        <h2 class="form-title">Sube tu video</h2>
+        <form action="/analizar" method="POST" enctype="multipart/form-data" id="uploadForm">
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="titulo">
+                        <span class="label-text">Título del partido</span>
+                        <span class="required">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        id="titulo" 
+                        name="titulo" 
+                        class="form-control" 
+                        placeholder="Ej: Partido vs Juan - Club Local"
+                        required
+                        maxlength="200"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="descripcion">
+                        <span class="label-text">Notas</span>
+                        <span class="optional">(opcional)</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        id="descripcion" 
+                        name="descripcion" 
+                        class="form-control" 
+                        placeholder="Condiciones, rival, superficie..."
+                        maxlength="200"
+                    >
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="video">
+                    <span class="label-text">Video del partido</span>
+                    <span class="required">*</span>
+                </label>
+                <div class="file-upload-wrapper compact">
+                    <input 
+                        type="file" 
+                        id="video" 
+                        name="video" 
+                        class="file-input" 
+                        accept="video/mp4,video/quicktime,video/x-msvideo,video/x-matroska"
+                        required
+                    >
+                    <label for="video" class="file-label">
+                        <span class="file-icon">📹</span>
+                        <span class="file-text">Selecciona el video de tu partido</span>
+                        <span class="file-info">MP4, MOV, AVI, MKV (máx. 100MB)</span>
+                    </label>
+                    <div class="file-name" id="fileName"></div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    Analizar Partido
+                </button>
+                <button type="reset" class="btn btn-secondary">
+                    Limpiar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="info-section compact">
+        <h3>Jugadas que detectamos y recortamos automáticamente</h3>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <h4>Saque</h4>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💪</div>
+                <h4>Derecha</h4>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔄</div>
+                <h4>Revés</h4>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h4>Posición de Espera</h4>
+            </div>
+        </div>
+        <p class="info-description">Genera clips individuales de cada jugada para analizar tu técnica con tu entrenador o por tu cuenta</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    // Mostrar nombre del archivo seleccionado
+    const fileInput = document.getElementById('video');
+    const fileName = document.getElementById('fileName');
+    const fileLabel = document.querySelector('.file-label');
+
+    fileInput.addEventListener('change', function(e) {
+        if (this.files && this.files.length > 0) {
+            const file = this.files[0];
+            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            fileName.textContent = `${file.name} (${sizeMB} MB)`;
+            fileName.style.display = 'block';
+            fileLabel.classList.add('has-file');
+        } else {
+            fileName.textContent = '';
+            fileName.style.display = 'none';
+            fileLabel.classList.remove('has-file');
+        }
+    });
+
+    // Validación de tamaño de archivo
+    const form = document.getElementById('uploadForm');
+    form.addEventListener('submit', function(e) {
+        const file = fileInput.files[0];
+        if (file && file.size > 100 * 1024 * 1024) { // 100MB
+            e.preventDefault();
+            alert('El archivo es demasiado grande. El tamaño máximo es 100MB.');
+            return false;
+        }
+        
+        // Mostrar indicador de carga
+        const submitBtn = form.querySelector('.btn-primary');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="btn-icon">⏳</span> Procesando...';
+    });
+
+    // Drag and drop
+    const fileUploadWrapper = document.querySelector('.file-upload-wrapper');
+    
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        fileUploadWrapper.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        fileUploadWrapper.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        fileUploadWrapper.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight(e) {
+        fileUploadWrapper.classList.add('highlight');
+    }
+
+    function unhighlight(e) {
+        fileUploadWrapper.classList.remove('highlight');
+    }
+
+    fileUploadWrapper.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files;
+        
+        // Trigger change event
+        const event = new Event('change', { bubbles: true });
+        fileInput.dispatchEvent(event);
+    }
+</script>
+{% endblock %}
+
