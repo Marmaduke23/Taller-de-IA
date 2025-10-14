@@ -1,2 +1,5 @@
 Entrenamiento/dataset/*
 !Entrenamiento/dataset/aquivanlosdatos.txt
+Entrenamiento/videos/*
+*.mp4
+*.avi
