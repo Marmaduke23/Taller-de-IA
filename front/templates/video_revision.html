@@ -13,7 +13,8 @@
 </section>
 
 <div class="review-container" style="display: flex; gap: 20px; align-items: stretch;">
-    <div class="form-container" id="video-list">
+    <!-- Lista de Videos: ancho ajustado al contenido -->
+    <div class="form-container" id="video-list" style="flex: 0 0 auto;">
         <h2 class="form-title">Lista de Videos</h2>
         <hr>
         <div class="video-list-items">
@@ -30,35 +31,33 @@
         </div>
     </div>
     
-    <div class="form-container" id="video-comment">
-        <div class="form-row">
-            <div class="form-group">
-                <div class="player-section" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                    <!-- Barra de navegación de clips -->
-                    <div id="clip-nav" style="margin-top: 10px; display: flex; gap: 8px; align-items: center;">
-                        <button type="button" class="btn btn-secondary" onclick="changeClip(-1)">&lt;</button>
-                        <span id="clip-label" style="flex: 1; text-align: center;">Clip 1 / {{ plays|length }}</span>
-                        <button type="button" class="btn btn-secondary" onclick="changeClip(1)">&gt;</button>
-                    </div>
-
-                    <!-- Video centrado -->
-                    <video id="videoPlayer" class="video-player" controls style="max-height: 400px; width: auto;"></video>
+    <!-- Player e Información: rellena el resto del espacio -->
+    <div class="form-container" id="video-comment" style="flex: 1; display: flex; flex-direction: column; gap: 20px;">
+        <div class="form-row" style="display: flex; gap: 20px; align-items: flex-start;">
+            <!-- Video + Barra -->
+            <div class="form-group" style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                <!-- Barra de navegación de clips -->
+                <div id="clip-nav" style="margin-bottom: 10px; display: flex; gap: 8px; align-items: center; width: 100%;">
+                    <button type="button" class="btn btn-secondary" onclick="changeClip(-1)">&lt;</button>
+                    <span id="clip-label" style="flex: 1; text-align: center;">Clip 1 / {{ plays|length }}</span>
+                    <button type="button" class="btn btn-secondary" onclick="changeClip(1)">&gt;</button>
                 </div>
 
+                <!-- Video centrado -->
+                <video id="videoPlayer" class="video-player" controls style="max-height: 400px; width: 100%; object-fit: contain;"></video>
             </div>
 
-            <div class="form-group">
+            <!-- Información del clip -->
+            <div class="form-group" style="flex: 1;">
                 <h3 class="input-title">Información de Clip ℹ️</h3>
 
-                <!-- Placeholder visible por defecto -->
-                <div id="placeholder">
-                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
-                        <img src="{{ url_for('static', filename='images/slam_green.svg') }}" alt="Sin video" class="no-video-image">
-                        <p class="no-videos">Seleccione un video para ver mayor información</p>
-                    </div>
+                <!-- Placeholder -->
+                <div id="placeholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                    <img src="{{ url_for('static', filename='images/slam_green.svg') }}" alt="Sin video" class="no-video-image">
+                    <p class="no-videos">Seleccione un video para ver mayor información</p>
                 </div>
 
-                <!-- Tabla de detalles oculta al inicio -->
+                <!-- Tabla de detalles -->
                 <div id="video-details" style="display: none; margin-top: 20px;">
                     <table class="video-details-table">
                         <tr>
@@ -77,6 +76,8 @@
                 </div>
             </div>
         </div>
+
+        <!-- Comentarios -->
         <div class="form-group" style="margin-top: auto;">
             <label>Agregar Comentarios ✍️</label>
             <textarea id="comentarios" placeholder="Agrega tus comentarios aquí..." rows="5" style="width: 100%;"></textarea>
