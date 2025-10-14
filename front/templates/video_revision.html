@@ -12,7 +12,7 @@
     </div>
 </section>
 
-<div class="review-container">
+<div class="review-container" style="display: flex; gap: 20px; align-items: stretch;">
     <div class="form-container" id="video-list">
         <h2 class="form-title">Lista de Videos</h2>
         <hr>
@@ -33,16 +33,18 @@
     <div class="form-container" id="video-comment">
         <div class="form-row">
             <div class="form-group">
-                <div class="player-section">
-                    <video id="videoPlayer" class="video-player" controls></video>
+                <div class="player-section" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
                     <!-- Barra de navegación de clips -->
-					<div id="clip-nav" style="margin-top: 10px; display: flex; gap: 8px; align-items: center;">
-						<button type="button" class="btn btn-secondary" onclick="changeClip(-1)">&lt;</button>
-						<span id="clip-label" style="flex: 1; text-align: center;">Clip 1 / {{ plays|length }}</span>
-						<button type="button" class="btn btn-secondary" onclick="changeClip(1)">&gt;</button>
-					</div>
+                    <div id="clip-nav" style="margin-top: 10px; display: flex; gap: 8px; align-items: center;">
+                        <button type="button" class="btn btn-secondary" onclick="changeClip(-1)">&lt;</button>
+                        <span id="clip-label" style="flex: 1; text-align: center;">Clip 1 / {{ plays|length }}</span>
+                        <button type="button" class="btn btn-secondary" onclick="changeClip(1)">&gt;</button>
+                    </div>
 
+                    <!-- Video centrado -->
+                    <video id="videoPlayer" class="video-player" controls style="max-height: 400px; width: auto;"></video>
                 </div>
+
             </div>
 
             <div class="form-group">
@@ -57,7 +59,7 @@
                 </div>
 
                 <!-- Tabla de detalles oculta al inicio -->
-                <div id="video-details" style="display: none;">
+                <div id="video-details" style="display: none; margin-top: 20px;">
                     <table class="video-details-table">
                         <tr>
                             <td class="table-label">Nombre de Video: </td>
@@ -75,13 +77,10 @@
                 </div>
             </div>
         </div>
-
-        <div class="form-group">
-            <div class="video-info">
-                <label>Agregar Comentarios ✍️</label>
-                <textarea id="comentarios" placeholder="Agrega tus comentarios aquí..." rows="10"></textarea>
-                <button type="button" class="btn btn-primary" onclick="saveComments()">Enviar Comentarios</button>
-            </div>
+        <div class="form-group" style="margin-top: auto;">
+            <label>Agregar Comentarios ✍️</label>
+            <textarea id="comentarios" placeholder="Agrega tus comentarios aquí..." rows="5" style="width: 100%;"></textarea>
+            <button type="button" class="btn btn-primary" onclick="saveComments()">Enviar Comentarios</button>
         </div>
     </div>
 </div>
@@ -92,15 +91,18 @@
 var plays = [];
 var currentClipIndex = 0;
 const video = document.getElementById('videoPlayer');
-const clipBar = document.getElementById('clip-nav'); // barra de clips
 
-// Convierte HH:MM:SS.ms a segundos
+// Convierte HH:MM:SS.ms a segundos (solo para mapear respuesta de la API)
 function hmsToSeconds(hms) {
-    const parts = hms.split(':');
-    return parseFloat(parts[0])*3600 + parseFloat(parts[1])*60 + parseFloat(parts[2]);
+    const parts = hms.split(':'); // ["HH","MM","SS.ms"]
+    if (parts.length !== 3) return 0;
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    const s = parseFloat(parts[2]);
+    return h*3600 + m*60 + s;
 }
 
-// Convierte segundos a HH:MM:SS.xx
+// Convierte segundos a HH:MM:SS.xx (para mostrar si lo necesitas)
 function formatTime(segundos) {
     const date = new Date(null);
     date.setSeconds(segundos);
@@ -125,11 +127,13 @@ function fetchClipSegments(videoFile) {
         return response.json();
     })
     .then(data => {
+        console.log(data);
         if (data && Array.isArray(data)) {
+            // Convertir tiempos a segundos directamente
             plays = data.map(item => ({
-                movimiento: item.type || item.movimiento || "desconocido",
-                tiempo_inicio: formatTime(item.start),
-                tiempo_fin: formatTime(item.end)
+                movimiento: item.movimiento || "desconocido",
+                tiempo_inicio: hmsToSeconds(item.tiempo_inicio),
+                tiempo_fin: hmsToSeconds(item.tiempo_termino)
             }));
             console.log('Plays:', plays);
         } else {
@@ -150,8 +154,8 @@ function playCurrentClip() {
     if (!plays.length) return;
 
     const clip = plays[currentClipIndex];
-    const start = hmsToSeconds(clip.tiempo_inicio);
-    const end = hmsToSeconds(clip.tiempo_fin);
+    const start = clip.tiempo_inicio; // ya es número
+    const end = clip.tiempo_fin;      // ya es número
 
     // Actualizar info de clip
     document.getElementById('detail-type').textContent = clip.movimiento;
@@ -204,7 +208,6 @@ function loadVideo(videoUrl, filename, event) {
     // Limpiar clips anteriores
     plays = [];
     currentClipIndex = 0;
-    renderClipBar(); // vacía la barra mientras llegan los datos
 
     // Cargar el video
     video.src = videoUrl;
@@ -217,7 +220,6 @@ function loadVideo(videoUrl, filename, event) {
             if (plays.length) {
                 playCurrentClip(); // reproducir primer clip
                 document.getElementById('detail-ai').textContent = 'Analizado ✔️';
-                renderClipBar(); // renderiza clips
             } else {
                 document.getElementById('detail-ai').textContent = 'No se detectaron jugadas';
             }
@@ -226,13 +228,6 @@ function loadVideo(videoUrl, filename, event) {
             console.error(err);
             document.getElementById('detail-ai').textContent = 'Error al analizar el video ❌';
         });
-}
-
-// Renderiza barra de clips
-function renderClipBar() {
-    const clipContainer = document.getElementById('clip-nav');
-    // Solo los botones y label ya existen, así que podemos actualizar si quieres agregar items visuales
-    // Ejemplo simple: se podría colorear clips activos, etc.
 }
 
 // Guardar comentarios
@@ -246,8 +241,6 @@ function saveComments() {
     }
 
     alert('Comentarios guardados para: ' + filename);
-    console.log('Video:', filename);
-    console.log('Comentarios:', comentarios);
 }
 </script>
 {% endblock %}

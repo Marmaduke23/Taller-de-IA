@@ -6,7 +6,9 @@ from flask import Flask, jsonify, request
 from predecir import predict_video_frames
 import os
 from flujo import generar_json_movimientos
+from flask_cors import CORS
 
+CORS(app)
 
 
 @app.route('/tennis-score/app-ia/predict', methods=['POST'])
