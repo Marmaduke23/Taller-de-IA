@@ -3,8 +3,8 @@ from torchvision import models, transforms
 from PIL import Image
 import io
 from app import model, class_names
+import os
 
-<<<<<<< HEAD
 def transform_image(image_path):
     my_transforms = transforms.Compose([transforms.Resize(256, interpolation=transforms.InterpolationMode.BILINEAR),
                                         transforms.CenterCrop(224),
@@ -14,13 +14,6 @@ def transform_image(image_path):
                                             [0.229, 0.224, 0.225])])
     image = Image.open(image_path).convert("RGB")
     return my_transforms(image).unsqueeze(0)
-=======
-import os
-
-def predict_image(model_path, img_path, class_names, device=None):
-    """
-    Carga un modelo entrenado y predice la clase de una imagen.
->>>>>>> d2d0b75f54a64a851a69fae0024407d08c4b7ca2
 
 def predict_image(image_path):
     tensor = transform_image(image_path=image_path)
@@ -34,18 +27,6 @@ def predict_image(image_path):
     
 
 
-<<<<<<< HEAD
-#class_names= ['backhand', 'forehand', 'ready_position', 'serve']
-
-#pred_class, prob = predict_image(
-#    model_path='resnet18_freezed.pth',
-#    img_path='imagenes_ejemplo/serve/serve2.png',
-#    class_names=class_names
-#)
-
-#print(f"Predicción: {pred_class} ({prob*100:.2f}%)")
-=======
->>>>>>> d2d0b75f54a64a851a69fae0024407d08c4b7ca2
 
 
 
@@ -94,18 +75,6 @@ def predict_secuence(list_images, class_names, step, device=None):
 
 
 
-<<<<<<< HEAD
-
-#result = predict_secuence(
- #   model_path='resnet18_freezed.pth',
-  #  list_images=['imagenes_ejemplo/serve\\serve1.png', 'imagenes_ejemplo/serve\\serve2.png'],
-   # class_names=class_names,
-    #step = 1
-#)
-
-
-=======
->>>>>>> d2d0b75f54a64a851a69fae0024407d08c4b7ca2
 # Asumimos que un movimiento dura 1 segundo.
 # Asumimos un minimo de 30 fotogramas por segundo (para ir checkeando cada 5-10 imagenes xd).
 # Por ende, un movimiento dura 30 fotogramas aprox. Le llamamos ratio a la duracion de un movimiento.
@@ -126,11 +95,7 @@ def predict_video_frames(imgs_dir, class_names, step, ratio, device=None):
         result = predict_secuence(
             list_images= subset,
             class_names= class_names,
-<<<<<<< HEAD
-            step = step,
-=======
             step = step
->>>>>>> d2d0b75f54a64a851a69fae0024407d08c4b7ca2
         )
         results.append(result)
         i+=ratio
@@ -139,40 +104,11 @@ def predict_video_frames(imgs_dir, class_names, step, ratio, device=None):
     return results
 
 
-<<<<<<< HEAD
-
-#results = predict_video_frames(
- #   model_path='resnet18_freezed.pth',
-  #  imgs_dir='imagenes_ejemplo/mix',
-   # class_names=class_names,
-    #step = 2,
-    #ratio = 30
-#)
-
-
-
-# Por lo que da la otra funcion el ratio es 58 aprox
-#results = predict_video_frames(
- #   model_path='resnet18_freezed.pth',
-  #  imgs_dir='videos/video1/frames',
-   # class_names=class_names,
-    #step = 2,
-    #ratio = 58*2
-#)
-
-#demoró 2-3 minutos aprox
-
-
-
-=======
->>>>>>> d2d0b75f54a64a851a69fae0024407d08c4b7ca2
 # Falta hacer una funcion que diga de que segundo a que segundo dura cada movmiento
 # (basta con considerar los FPS por segundo.. creo)
 
 
 
-<<<<<<< HEAD
-=======
 
 # class_names= ['backhand', 'forehand', 'ready_position', 'serve']
 
@@ -216,4 +152,3 @@ def predict_video_frames(imgs_dir, class_names, step, ratio, device=None):
 # )
 
 # #demoró 2-3 minutos aprox
->>>>>>> d2d0b75f54a64a851a69fae0024407d08c4b7ca2

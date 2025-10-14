@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*- 
 from app import app, class_names
 from flask_funcs import predict_image_flask
-from procesar_video import procesar_video
+from procesamiento_videos import procesar_video
 from flask import Flask, jsonify, request
 from predecir import predict_video_frames
 import os
+from flujo import generar_json_movimientos
 
 
 
-@app.route('/ejercicio3/app1-ia/predict', methods=['POST'])
+@app.route('/tennis-score/app-ia/predict', methods=['POST'])
 def predict():
     headers = request.headers
     if 'Codigo' not in headers or headers['Codigo'] != 'pengu':
@@ -23,7 +24,7 @@ def predict():
     return jsonify(json_respuesta)
 
 
-@app.route('/ejercicio3/app1-ia/video', methods=['POST'])
+@app.route('/tennis-score/app-ia/video', methods=['POST'])
 def video():
     file = request.files['file']
     #guardar el video en carpeta videos
@@ -37,14 +38,17 @@ def video():
     file.save(save_path)
     step = 1
     info_video = procesar_video(save_path, guardar_cada=step)
+    fps = info_video['fps']
+    ratio = round(fps/step)
     vector_clases=predict_video_frames(
                     imgs_dir=save_dir+'/frames',
                     class_names=class_names,
                     step = 1,
-                    ratio = round(info_video['fps']*0.5)
+                    ratio = ratio
                 )
+    movs = generar_json_movimientos(vector_clases, fps, ratio, step=step)
 
-    return jsonify({"message": "Video procesado"}), 200
+    return jsonify(movs), 200
     
 
 if __name__ == "__main__":
