@@ -105,6 +105,8 @@ def uploaded_file(filename):
     """Sirve los archivos de video desde la carpeta uploads"""
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+
+# Seccion para revisar videos
 @app.route('/revision')
 def revision():
     """Muestra la interfaz de revisión de videos"""

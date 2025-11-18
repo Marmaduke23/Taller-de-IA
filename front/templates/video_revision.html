@@ -69,7 +69,11 @@
                             <td id="detail-type">-</td>
                         </tr>
                         <tr>
-                            <td class="table-label">Comentarios IA: </td>
+                            <td class="table-label">Ejecución:</td>
+                            <td id="detail-pose">-</td>
+                        </tr>
+                        <tr>
+                            <td class="table-label">Analisis IA: </td>
                             <td id="detail-ai">-</td>
                         </tr>
                     </table>
@@ -93,33 +97,14 @@ var plays = [];
 var currentClipIndex = 0;
 const video = document.getElementById('videoPlayer');
 
-// Convierte HH:MM:SS.ms a segundos (solo para mapear respuesta de la API)
-function hmsToSeconds(hms) {
-    const parts = hms.split(':'); // ["HH","MM","SS.ms"]
-    if (parts.length !== 3) return 0;
-    const h = parseInt(parts[0], 10);
-    const m = parseInt(parts[1], 10);
-    const s = parseFloat(parts[2]);
-    return h*3600 + m*60 + s;
-}
-
-// Convierte segundos a HH:MM:SS.xx (para mostrar si lo necesitas)
-function formatTime(segundos) {
-    const date = new Date(null);
-    date.setSeconds(segundos);
-    const hh = String(date.getUTCHours()).padStart(2, '0');
-    const mm = String(date.getUTCMinutes()).padStart(2, '0');
-    const ss = String(date.getUTCSeconds()).padStart(2, '0');
-    const cs = String(Math.floor((segundos % 1) * 100)).padStart(2, '0');
-    return `${hh}:${mm}:${ss}.${cs}`;
-}
 
 // Fetch para obtener clips desde la API
 function fetchClipSegments(videoFile) {
     const formData = new FormData();
     formData.append('file', videoFile);
 
-    return fetch('http://127.0.0.1:7003/tennis-score/app-ia/video', {
+    //http://127.0.0.1:7003/tennis-score/app-ia/video
+    return fetch('https://uncornered-gustier-alisia.ngrok-free.dev/process-video', {
         method: 'POST',
         body: formData
     })
@@ -128,13 +113,13 @@ function fetchClipSegments(videoFile) {
         return response.json();
     })
     .then(data => {
-        console.log(data);
-        if (data && Array.isArray(data)) {
+        if (data) {
             // Convertir tiempos a segundos directamente
-            plays = data.map(item => ({
-                movimiento: item.movimiento || "desconocido",
-                tiempo_inicio: hmsToSeconds(item.tiempo_inicio),
-                tiempo_fin: hmsToSeconds(item.tiempo_termino)
+            plays = data.samples.map(item => ({
+                movimiento: item.cls.label || "desconocido",
+                tiempo_inicio: item.start_ms / 1000,
+                tiempo_fin: item.end_ms / 1000,
+                pose: item.pose.label
             }));
             console.log('Plays:', plays);
         } else {
@@ -160,6 +145,11 @@ function playCurrentClip() {
 
     // Actualizar info de clip
     document.getElementById('detail-type').textContent = clip.movimiento;
+    if(clip.pose){
+        document.getElementById('detail-pose').textContent = clip.pose
+    }else{
+        document.getElementById('detail-pose').textContent = 'undefined'
+    }
 
     // Actualizar label de navegación
     document.getElementById('clip-label').textContent = `Clip ${currentClipIndex+1} / ${plays.length}`;
@@ -229,19 +219,6 @@ function loadVideo(videoUrl, filename, event) {
             console.error(err);
             document.getElementById('detail-ai').textContent = 'Error al analizar el video ❌';
         });
-}
-
-// Guardar comentarios
-function saveComments() {
-    const comentarios = document.getElementById('comentarios').value;
-    const filename = document.getElementById('detail-filename').textContent;
-
-    if (!filename || filename === '-') {
-        alert('Por favor selecciona un video primero.');
-        return;
-    }
-
-    alert('Comentarios guardados para: ' + filename);
 }
 </script>
 {% endblock %}
