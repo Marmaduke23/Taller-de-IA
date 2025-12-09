@@ -32,78 +32,166 @@
     </div>
     
     <!-- Player e Información: rellena el resto del espacio -->
-    <div class="form-container" id="video-comment" style="flex: 1; display: flex; flex-direction: column; gap: 20px;">
-        <div class="form-row" style="display: flex; gap: 20px; align-items: flex-start;">
-            <!-- Video + Barra -->
-            <div class="form-group" style="flex: 1; display: flex; flex-direction: column; align-items: center;">
-                <!-- Barra de navegación de clips -->
-                <div id="clip-nav" style="margin-bottom: 10px; display: flex; gap: 8px; align-items: center; width: 100%;">
-                    <button type="button" class="btn btn-secondary" onclick="changeClip(-1)">&lt;</button>
-                    <span id="clip-label" style="flex: 1; text-align: center;">Clip 1 / {{ plays|length }}</span>
-                    <button type="button" class="btn btn-secondary" onclick="changeClip(1)">&gt;</button>
-                </div>
-
-                <!-- Video centrado -->
-                <video id="videoPlayer" class="video-player" controls style="max-height: 400px; width: 100%; object-fit: contain;"></video>
-            </div>
-
-            <!-- Información del clip -->
-            <div class="form-group" style="flex: 1;">
-                <h3 class="input-title">Información de Clip ℹ️</h3>
-
-                <!-- Placeholder -->
-                <div id="placeholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
-                    <img src="{{ url_for('static', filename='images/slam_green.svg') }}" alt="Sin video" class="no-video-image">
-                    <p class="no-videos">Seleccione un video para ver mayor información</p>
-                </div>
-
-                <!-- Tabla de detalles -->
-                <div id="video-details" style="display: none; margin-top: 20px;">
-                    <table class="video-details-table">
-                        <tr>
-                            <td class="table-label">Nombre de Video: </td>
-                            <td id="detail-filename">-</td>
-                        </tr>
-                        <tr>
-                            <td class="table-label">Tipo de Jugada: </td>
-                            <td id="detail-type">-</td>
-                        </tr>
-                        <tr>
-                            <td class="table-label">Ejecución:</td>
-                            <td id="detail-pose">-</td>
-                        </tr>
-                        <tr>
-                            <td class="table-label">Analisis IA: </td>
-                            <td id="detail-ai">-</td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
+    <div class="form-container" id="video-comment" style="flex: 1; display: flex; flex-direction: column; gap: 20px; position: relative; min-height: 500px;">
+        
+        <!-- Placeholder que cubre todo -->
+        <div id="placeholder" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: inherit; z-index: 10;">
+            <h1 class="no-videos">Seleccione un video para ver mayor información</h1>
+            <img src="{{ url_for('static', filename='images/slam_green.svg') }}" alt="Sin video" class="no-video-image">
         </div>
 
-        <!-- Comentarios -->
-        <div class="form-group" style="margin-top: auto;">
-            <label>Agregar Comentarios ✍️</label>
-            <textarea id="comentarios" placeholder="Agrega tus comentarios aquí..." rows="5" style="width: 100%;"></textarea>
-            <button type="button" class="btn btn-primary" onclick="saveComments()">Enviar Comentarios</button>
+        <!-- Contenido que se mostrará después de seleccionar video -->
+        <div id="video-content" style="display: none; flex: 1; flex-direction: column; gap: 20px;">
+            <div class="form-row" style="display: flex; gap: 20px; align-items: flex-start;">
+                <!-- Video + Barra -->
+                <div class="form-group" style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                    <!-- Barra de navegación de clips -->
+                    <div id="clip-nav" style="margin-bottom: 10px; display: flex; gap: 8px; align-items: center; width: 100%;">
+                        <button type="button" class="btn btn-secondary" onclick="changeClip(-1)">&lt;</button>
+                        <span id="clip-label" style="flex: 1; text-align: center;">Clip 1 / {{ plays|length }}</span>
+                        <button type="button" class="btn btn-secondary" onclick="changeClip(1)">&gt;</button>
+                    </div>
+
+                    <!-- Video centrado -->
+                    <video id="videoPlayer" class="video-player" controls style="max-height: 400px; width: 100%; object-fit: contain;"></video>
+                </div>
+
+                <!-- Información del clip -->
+                <div class="form-group" style="flex: 1;">
+                    <h3 class="input-title">Información de Clip ℹ️</h3>
+
+                    <!-- Tabla de detalles -->
+                    <div id="video-details" style="margin-top: 20px;">
+                        <table class="video-details-table">
+                            <tr>
+                                <td class="table-label">Nombre de Video: </td>
+                                <td id="detail-filename">-</td>
+                            </tr>
+                            <tr>
+                                <td class="table-label">Tipo de Jugada: </td>
+                                <td id="detail-type">-</td>
+                            </tr>
+                            <tr>
+                                <td class="table-label">Ejecución:</td>
+                                <td id="detail-pose">-</td>
+                            </tr>
+                            <tr>
+                                <td class="table-label">Analisis IA: </td>
+                                <td id="detail-ai">-</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comentarios -->
+            <div class="form-group" style="margin-top: auto;">
+                <label>Agregar Comentarios ✍️</label>
+                <textarea id="comentarios" placeholder="Agrega tus comentarios aquí..." rows="3" style="width: 100%;"></textarea>
+                <button type="button" class="btn btn-primary" onclick="saveComments()" style="margin-top: 10px;">Enviar Comentario</button>
+                
+                <!-- Lista de comentarios existentes -->
+                <div id="comments-list" style="margin-top: 20px;">
+                    <h4 style="margin-bottom: 10px; color: #2c3e50;">💬 Comentarios del Video</h4>
+                    <div id="comments-container" style="max-height: 300px; overflow-y: auto;">
+                        <!-- Los comentarios se cargarán aquí dinámicamente -->
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<style>
+.comment-card {
+    background: #f8f9fa;
+    border-left: 4px solid #4CAF50;
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.comment-card:hover {
+    background: #e9ecef;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.comment-date {
+    font-size: 0.85em;
+    color: #6c757d;
+}
+
+.comment-text {
+    color: #2c3e50;
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+.comment-delete {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: background 0.2s;
+}
+
+.comment-delete:hover {
+    background: #c82333;
+}
+
+.no-comments {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    padding: 20px;
+}
+
+#comments-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+#comments-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+#comments-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+#comments-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+</style>
+
 {% endblock %}
 
 {% block javascript %}
 <script>
 var plays = [];
 var currentClipIndex = 0;
+var currentVideoFilename = null;
 const video = document.getElementById('videoPlayer');
 
-
 // Fetch para obtener clips desde la API
-function fetchClipSegments(videoFile) {
+function fetchClipSegments(videoFile, nth = 10) {
     const formData = new FormData();
     formData.append('file', videoFile);
+    formData.append('nth', nth);
 
-    //http://127.0.0.1:7003/tennis-score/app-ia/video
     return fetch('https://uncornered-gustier-alisia.ngrok-free.dev/process-video', {
         method: 'POST',
         body: formData
@@ -114,7 +202,6 @@ function fetchClipSegments(videoFile) {
     })
     .then(data => {
         if (data) {
-            // Convertir tiempos a segundos directamente
             plays = data.samples.map(item => ({
                 movimiento: item.cls.label || "desconocido",
                 tiempo_inicio: item.start_ms / 1000,
@@ -140,8 +227,8 @@ function playCurrentClip() {
     if (!plays.length) return;
 
     const clip = plays[currentClipIndex];
-    const start = clip.tiempo_inicio; // ya es número
-    const end = clip.tiempo_fin;      // ya es número
+    const start = clip.tiempo_inicio;
+    const end = clip.tiempo_fin;
 
     // Actualizar info de clip
     document.getElementById('detail-type').textContent = clip.movimiento;
@@ -179,18 +266,171 @@ document.addEventListener('keydown', function(event) {
     if(event.key === "ArrowLeft") changeClip(-1);
 });
 
+// Cargar comentarios de un video
+function loadComments(filename) {
+    fetch(`/api/comments/${encodeURIComponent(filename)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayComments(data.comments);
+            }
+        })
+        .catch(err => {
+            console.error('Error al cargar comentarios:', err);
+        });
+}
+
+// Mostrar comentarios en la interfaz
+function displayComments(comments) {
+    const container = document.getElementById('comments-container');
+    
+    if (comments.length === 0) {
+        container.innerHTML = '<div class="no-comments">No hay comentarios aún. ¡Sé el primero en comentar!</div>';
+        return;
+    }
+    
+    container.innerHTML = comments.map(comment => `
+        <div class="comment-card">
+            <div class="comment-header">
+                <span class="comment-date">📅 ${comment.timestamp}</span>
+                <button class="comment-delete" onclick="deleteComment(${comment.id})">🗑️ Eliminar</button>
+            </div>
+            <div class="comment-text">${escapeHtml(comment.text)}</div>
+        </div>
+    `).join('');
+}
+
+// Escapar HTML para prevenir XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Guardar comentario
+function saveComments() {
+    const textarea = document.getElementById('comentarios');
+    const comment = textarea.value.trim();
+    const btn = document.querySelector('button[onclick="saveComments()"]');
+    
+    if (!comment) {
+        alert('Por favor escribe un comentario antes de enviar');
+        return;
+    }
+    
+    if (!currentVideoFilename) {
+        alert('Por favor selecciona un video primero');
+        return;
+    }
+    
+    // Deshabilitar botón mientras se procesa
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ Guardando...';
+    
+    fetch(`/api/comments/${encodeURIComponent(currentVideoFilename)}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ comment: comment })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            textarea.value = ''; // Limpiar textarea
+            loadComments(currentVideoFilename); // Recargar comentarios
+            
+            // Mostrar notificación de éxito
+            btn.textContent = '✔️ Comentario guardado!';
+            btn.style.background = '#28a745';
+            
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = '';
+                btn.disabled = false;
+            }, 2000);
+        } else {
+            alert('Error al guardar el comentario: ' + (data.error || 'Error desconocido'));
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('Error al guardar el comentario');
+        btn.textContent = originalText;
+        btn.disabled = false;
+    });
+}
+
+// Eliminar comentario
+function deleteComment(commentId) {
+    if (!confirm('¿Estás seguro de que quieres eliminar este comentario?')) {
+        return;
+    }
+    
+    fetch(`/api/comments/${encodeURIComponent(currentVideoFilename)}/${commentId}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadComments(currentVideoFilename); // Recargar comentarios
+        } else {
+            alert('Error al eliminar el comentario');
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('Error al eliminar el comentario');
+    });
+}
+
+// Guardar procesamiento en el servidor (después de fetch exitoso a API externa)
+function saveProcessingToServer(filename, playsData) {
+    const samples = playsData.map(play => ({
+        movimiento: play.movimiento,
+        tiempo_inicio: play.tiempo_inicio,
+        tiempo_fin: play.tiempo_fin,
+        pose: play.pose
+    }));
+    
+    fetch(`/api/processing/${encodeURIComponent(filename)}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ samples: samples })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('✅ Procesamiento guardado en servidor');
+        } else {
+            console.warn('⚠️ No se pudo guardar procesamiento:', data.error);
+        }
+    })
+    .catch(err => {
+        console.error('❌ Error al guardar procesamiento:', err);
+    });
+}
+
 // Función de carga de video
 function loadVideo(videoUrl, filename, event) {
     const placeholder = document.getElementById('placeholder');
-    const videoDetails = document.getElementById('video-details');
+    const videoContent = document.getElementById('video-content');
 
-    // Mostrar tabla y ocultar placeholder
+    // Ocultar placeholder y mostrar contenido
     placeholder.style.display = 'none';
-    videoDetails.style.display = 'block';
+    videoContent.style.display = 'flex';
 
-    // Actualizar nombre de video y estado IA
+    // Guardar nombre del video actual
+    currentVideoFilename = filename;
+
+    // Actualizar nombre de video
     document.getElementById('detail-filename').textContent = filename;
-    document.getElementById('detail-ai').textContent = 'Analizando...';
+    document.getElementById('detail-ai').textContent = 'Verificando caché...';
 
     // Marcar ítem activo
     document.querySelectorAll('.video-item').forEach(item => item.classList.remove('active'));
@@ -199,25 +439,70 @@ function loadVideo(videoUrl, filename, event) {
     // Limpiar clips anteriores
     plays = [];
     currentClipIndex = 0;
+    
+    // Limpiar textarea de comentarios
+    document.getElementById('comentarios').value = '';
 
     // Cargar el video
     video.src = videoUrl;
     video.load();
 
-    // Obtener archivo desde URL y enviar a API
-    fetchVideoFile(videoUrl)
-        .then(videoFile => fetchClipSegments(videoFile))
-        .then(() => {
-            if (plays.length) {
-                playCurrentClip(); // reproducir primer clip
-                document.getElementById('detail-ai').textContent = 'Analizado ✔️';
+    // Cargar comentarios existentes
+    loadComments(filename);
+
+    // PASO 1: Consultar al servidor si el video ya fue procesado
+    fetch(`/api/processing/${encodeURIComponent(filename)}`)
+        .then(response => response.json())
+        .then(cacheData => {
+            if (cacheData.success && cacheData.cached) {
+                // CASO 1: El video YA FUE PROCESADO - usar datos guardados
+                console.log('📦 Video ya procesado, usando datos guardados');
+                document.getElementById('detail-ai').textContent = 'Cargado desde caché ⚡';
+                
+                plays = cacheData.data.samples.map(item => ({
+                    movimiento: item.movimiento,
+                    tiempo_inicio: item.tiempo_inicio,
+                    tiempo_fin: item.tiempo_fin,
+                    pose: item.pose
+                }));
+                
+                if (plays.length) {
+                    playCurrentClip();
+                    document.getElementById('detail-ai').textContent = 'Analizado ✔️ (caché)';
+                } else {
+                    document.getElementById('detail-ai').textContent = 'No se detectaron jugadas (caché)';
+                }
             } else {
-                document.getElementById('detail-ai').textContent = 'No se detectaron jugadas';
+                // CASO 2: El video NO FUE PROCESADO - procesar con API externa
+                console.log('🔄 Video no procesado, llamando a API externa...');
+                document.getElementById('detail-ai').textContent = 'Analizando con IA...';
+                
+                // Obtener archivo y procesarlo con API externa
+                fetchVideoFile(videoUrl)
+                    .then(videoFile => fetchClipSegments(videoFile))
+                    .then(() => {
+                        // El fetch a la API externa fue EXITOSO
+                        if (plays.length) {
+                            playCurrentClip();
+                            document.getElementById('detail-ai').textContent = 'Analizado ✔️';
+                            
+                            // PASO 2: Guardar resultado en el servidor (solo si fue exitoso)
+                            saveProcessingToServer(filename, plays);
+                        } else {
+                            document.getElementById('detail-ai').textContent = 'No se detectaron jugadas';
+                        }
+                    })
+                    .catch(err => {
+                        // El fetch a la API externa FALLÓ
+                        console.error('❌ Error al procesar con API externa:', err);
+                        document.getElementById('detail-ai').textContent = 'Error al analizar el video ❌';
+                        // NO guardar nada si hubo error
+                    });
             }
         })
         .catch(err => {
-            console.error(err);
-            document.getElementById('detail-ai').textContent = 'Error al analizar el video ❌';
+            console.error('❌ Error al verificar caché en servidor:', err);
+            document.getElementById('detail-ai').textContent = 'Error al verificar caché';
         });
 }
 </script>
