@@ -2,6 +2,7 @@
 
 {% block title %}Revisa Videos - Tennis Score{% endblock %}
 
+
 {% block content %}
 <section class="hero">
     <div class="hero-content">
@@ -13,7 +14,8 @@
 </section>
 
 <div class="review-container" style="display: flex; gap: 20px; align-items: stretch;">
-    <!-- Lista de Videos: ancho ajustado al contenido -->
+
+    <!-- Lista de Videos -->
     <div class="form-container" id="video-list" style="flex: 0 0 auto;">
         <h2 class="form-title">Lista de Videos</h2>
         <hr>
@@ -30,45 +32,51 @@
             {% endif %}
         </div>
     </div>
-    
-    <!-- Player e Información: rellena el resto del espacio -->
+
+    <!-- Player + Info -->
     <div class="form-container" id="video-comment" style="flex: 1; display: flex; flex-direction: column; gap: 20px; position: relative; min-height: 500px;">
         
-        <!-- Placeholder que cubre todo -->
-        <div id="placeholder" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: inherit; z-index: 10;">
+        <!-- Placeholder -->
+        <div id="placeholder" style="
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; background: inherit; z-index: 10;">
             <h1 class="no-videos">Seleccione un video para ver mayor información</h1>
             <img src="{{ url_for('static', filename='images/slam_green.svg') }}" alt="Sin video" class="no-video-image">
         </div>
 
-        <!-- Contenido que se mostrará después de seleccionar video -->
+        <!-- Video + Información -->
         <div id="video-content" style="display: none; flex: 1; flex-direction: column; gap: 20px;">
-            <div class="form-row" style="display: flex; gap: 20px; align-items: flex-start;">
+
+            <!-- FILA PRINCIPAL: Video + Info -->
+            <div class="video-info-row">
+
                 <!-- Video + Barra -->
-                <div class="form-group" style="flex: 1; display: flex; flex-direction: column; align-items: center;">
-                    <!-- Barra de navegación de clips -->
+                <div class="form-group video-player-container" style="flex: 1;">
+                    
+                    <!-- Barra navegación -->
                     <div id="clip-nav" style="margin-bottom: 10px; display: flex; gap: 8px; align-items: center; width: 100%;">
                         <button type="button" class="btn btn-secondary" onclick="changeClip(-1)">&lt;</button>
                         <span id="clip-label" style="flex: 1; text-align: center;">Clip 1 / {{ plays|length }}</span>
                         <button type="button" class="btn btn-secondary" onclick="changeClip(1)">&gt;</button>
                     </div>
 
-                    <!-- Video centrado -->
-                    <video id="videoPlayer" class="video-player" controls style="max-height: 400px; width: 100%; object-fit: contain;"></video>
+                    <!-- VIDEO REPRODUCTOR -->
+                    <video id="videoPlayer" class="video-player" controls></video>
                 </div>
 
-                <!-- Información del clip -->
-                <div class="form-group" style="flex: 1;">
+                <!-- Información del Clip -->
+                <div class="form-group clip-info-container" style="flex: 1;">
                     <h3 class="input-title">Información de Clip ℹ️</h3>
 
-                    <!-- Tabla de detalles -->
-                    <div id="video-details" style="margin-top: 20px;">
+                    <div id="video-details">
                         <table class="video-details-table">
                             <tr>
-                                <td class="table-label">Nombre de Video: </td>
+                                <td class="table-label">Nombre de Video:</td>
                                 <td id="detail-filename">-</td>
                             </tr>
                             <tr>
-                                <td class="table-label">Tipo de Jugada: </td>
+                                <td class="table-label">Tipo de Jugada:</td>
                                 <td id="detail-type">-</td>
                             </tr>
                             <tr>
@@ -76,7 +84,7 @@
                                 <td id="detail-pose">-</td>
                             </tr>
                             <tr>
-                                <td class="table-label">Analisis IA: </td>
+                                <td class="table-label">Analisis IA:</td>
                                 <td id="detail-ai">-</td>
                             </tr>
                         </table>
@@ -90,12 +98,9 @@
                 <textarea id="comentarios" placeholder="Agrega tus comentarios aquí..." rows="3" style="width: 100%;"></textarea>
                 <button type="button" class="btn btn-primary" onclick="saveComments()" style="margin-top: 10px;">Enviar Comentario</button>
                 
-                <!-- Lista de comentarios existentes -->
                 <div id="comments-list" style="margin-top: 20px;">
                     <h4 style="margin-bottom: 10px; color: #2c3e50;">💬 Comentarios del Video</h4>
-                    <div id="comments-container" style="max-height: 300px; overflow-y: auto;">
-                        <!-- Los comentarios se cargarán aquí dinámicamente -->
-                    </div>
+                    <div id="comments-container" style="max-height: 300px; overflow-y: auto;"></div>
                 </div>
             </div>
         </div>
@@ -103,6 +108,49 @@
 </div>
 
 <style>
+/* 🔥 NUEVAS CLASES (centrado perfecto) */
+
+.video-info-row {
+    display: flex;
+    gap: 20px;
+    align-items: center;            /* CENTRA verticalmente video + info */
+}
+
+.video-player-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;        /* CENTRADO VERTICAL */
+    align-items: center;            /* CENTRADO HORIZONTAL */
+    height: 100%;
+    min-height: 430px;             /* Altura uniforme */
+}
+
+.video-player {
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+}
+
+/* Información centrada verticalmente */
+.clip-info-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;       /* CENTRADO vertical */
+    height: 100%;
+    min-height: 430px;
+}
+
+.video-details-table {
+    margin-top: 15px;
+}
+
+.table-label {
+    font-weight: bold;
+    padding-right: 10px;
+}
+
+/* --------- Comentarios (tu CSS original) ---------- */
+
 .comment-card {
     background: #f8f9fa;
     border-left: 4px solid #4CAF50;
@@ -133,7 +181,6 @@
 .comment-text {
     color: #2c3e50;
     line-height: 1.5;
-    word-wrap: break-word;
 }
 
 .comment-delete {
@@ -143,8 +190,6 @@
     padding: 4px 10px;
     border-radius: 3px;
     cursor: pointer;
-    font-size: 0.85em;
-    transition: background 0.2s;
 }
 
 .comment-delete:hover {
@@ -162,18 +207,8 @@
     width: 8px;
 }
 
-#comments-container::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-
 #comments-container::-webkit-scrollbar-thumb {
     background: #888;
-    border-radius: 4px;
-}
-
-#comments-container::-webkit-scrollbar-thumb:hover {
-    background: #555;
 }
 </style>
 
