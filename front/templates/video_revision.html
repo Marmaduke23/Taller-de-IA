@@ -89,6 +89,15 @@
                             </tr>
                         </table>
                     </div>
+                    <div class="rating-controls" style="margin-top: 25px;">
+                        <h4 class="input-title" style="margin-bottom: 10px;">Tu Evaluación 🌟</h4>
+                        <div id="rating-display" style="font-size: 1.1em; font-weight: bold; color: #3498db; margin-bottom: 15px;">
+                            Estado: Sin calificar
+                        </div>
+                        <button type="button" id="rate-good" class="btn btn-success" onclick="saveRating('good')">✅ Bueno</button>
+                        <button type="button" id="rate-bad" class="btn btn-danger" onclick="saveRating('bad')">❌ Malo</button>
+                        <button type="button" id="rate-clear" class="btn btn-secondary" onclick="saveRating('clear')" style="margin-left: 10px;">Limpiar</button>
+                    </div>
                 </div>
             </div>
 
@@ -276,6 +285,12 @@
     margin-bottom: 8px;
 }
 
+/* Estilo para los botones de rating activo */
+#rate-good.active-rating, #rate-bad.active-rating {
+    border: 3px solid #17a2b8; /* Borde para indicar que está activo */
+    box-shadow: 0 0 8px rgba(23, 162, 184, 0.5);
+}
+
 .stat-label {
     color: #6c757d;
     font-size: 14px;
@@ -296,10 +311,19 @@
 {% block javascript %}
 <script>
 var plays = [];
+var allPlays = []; // Nueva variable para guardar TODOS los clips (incluido ready_position)
 var currentClipIndex = 0;
 var currentVideoFilename = null;
 var statsSummary = null;
 const video = document.getElementById('videoPlayer');
+
+// Función para filtrar clips de ready_position
+function filterReadyPositionClips(plays) {
+    return plays.filter(play => {
+        const normalized = normalizeLabel(play.movimiento);
+        return normalized !== 'espera'; // Excluir clips de "espera" (ready_position)
+    });
+}
 
 // Fetch para obtener clips desde la API
 function fetchClipSegments(videoFile, nth = 10) {
@@ -323,12 +347,21 @@ function fetchClipSegments(videoFile, nth = 10) {
                 tiempo_fin: (item.end_ms || 0) / 1000,
                 pose: item.pose ? item.pose.label : undefined
             }));
-            plays = parsedPlays;
-            console.log('Plays:', plays);
-            return { apiData: data, plays: parsedPlays };
+            
+            // Guardar TODOS los clips para estadísticas
+            allPlays = parsedPlays;
+            
+            // Filtrar solo para el selector de clips
+            const filteredPlays = filterReadyPositionClips(parsedPlays);
+            plays = filteredPlays;
+            
+            console.log('Plays totales (para estadísticas):', allPlays.length);
+            console.log('Plays en selector (sin ready_position):', filteredPlays.length);
+            
+            return { apiData: data, plays: filteredPlays, allPlays: parsedPlays };
         } else {
             console.warn('Respuesta inesperada:', data);
-            return { apiData: data, plays: [] };
+            return { apiData: data, plays: [], allPlays: [] };
         }
     });
 }
@@ -436,7 +469,9 @@ function mapSampleToPlay(sample) {
             movimiento: sample.movimiento,
             tiempo_inicio: sample.tiempo_inicio,
             tiempo_fin: sample.tiempo_fin,
-            pose: sample.pose
+            pose: sample.pose,
+            rating: sample.rating, // 💡 AGREGADO
+            start_ms: sample.start_ms || sample.tiempo_inicio * 1000 // 💡 AGREGADO (Necesario para la API)
         };
     }
 
@@ -444,10 +479,13 @@ function mapSampleToPlay(sample) {
         movimiento: (sample && sample.cls && sample.cls.label) ? sample.cls.label : 'desconocido',
         tiempo_inicio: (sample && sample.start_ms ? sample.start_ms : 0) / 1000,
         tiempo_fin: (sample && sample.end_ms ? sample.end_ms : 0) / 1000,
-        pose: sample && sample.pose ? sample.pose.label : undefined
+        pose: sample && sample.pose ? sample.pose.label : undefined,
+        rating: sample && sample.rating ? sample.rating : undefined, // 💡 AGREGADO
+        start_ms: sample && sample.start_ms ? sample.start_ms : 0 // 💡 AGREGADO
     };
 }
 
+// Función para reproducir clip actual
 // Función para reproducir clip actual
 function playCurrentClip() {
     if (!plays.length) return;
@@ -463,6 +501,9 @@ function playCurrentClip() {
     }else{
         document.getElementById('detail-pose').textContent = 'undefined'
     }
+    
+    // 💡 AGREGADO: Mostrar la calificación del clip
+    updateRatingUI(clip.rating);
 
     // Actualizar label de navegación
     document.getElementById('clip-label').textContent = `Clip ${currentClipIndex+1} / ${plays.length}`;
@@ -664,6 +705,7 @@ function loadVideo(videoUrl, filename, event) {
 
     // Limpiar clips anteriores
     plays = [];
+    allPlays = [];
     currentClipIndex = 0;
     resetStatsUI();
     
@@ -687,14 +729,22 @@ function loadVideo(videoUrl, filename, event) {
                 document.getElementById('detail-ai').textContent = 'Cargado desde caché ⚡';
                 
                 const cachedSamples = cacheData.data && Array.isArray(cacheData.data.samples) ? cacheData.data.samples : [];
-                plays = cachedSamples.map(mapSampleToPlay);
-                updateStatsUI(cacheData.data.summary || computeStatsFromPlays(plays));
+                let mappedPlays = cachedSamples.map(mapSampleToPlay);
+                
+                // Guardar TODOS los clips para estadísticas
+                allPlays = mappedPlays;
+                
+                // Filtrar solo para el selector de clips (sin ready_position)
+                plays = filterReadyPositionClips(mappedPlays);
+                
+                // Las estadísticas usan TODOS los clips (allPlays)
+                updateStatsUI(cacheData.data.summary || computeStatsFromPlays(allPlays));
                 
                 if (plays.length) {
                     playCurrentClip();
-                    document.getElementById('detail-ai').textContent = 'Analizado ✔️ (caché)';
+                    document.getElementById('detail-ai').textContent = 'Analizado ✔️';
                 } else {
-                    document.getElementById('detail-ai').textContent = 'No se detectaron jugadas (caché)';
+                    document.getElementById('detail-ai').textContent = 'No se detectaron jugadas';
                 }
             } else {
                 // CASO 2: El video NO FUE PROCESADO - procesar con API externa
@@ -706,8 +756,13 @@ function loadVideo(videoUrl, filename, event) {
                     .then(videoFile => fetchClipSegments(videoFile))
                     .then(result => {
                         const parsedPlays = (result && result.plays) ? result.plays : [];
-                        plays = parsedPlays;
-                        const stats = computeStatsFromPlays(parsedPlays);
+                        const allParsedPlays = (result && result.allPlays) ? result.allPlays : [];
+                        
+                        plays = parsedPlays; // clips filtrados (sin ready_position)
+                        allPlays = allParsedPlays; // TODOS los clips (con ready_position)
+                        
+                        // Las estadísticas usan TODOS los clips
+                        const stats = computeStatsFromPlays(allPlays);
                         updateStatsUI(stats);
 
                         // El fetch a la API externa fue EXITOSO
@@ -740,6 +795,90 @@ function loadVideo(videoUrl, filename, event) {
             document.getElementById('detail-ai').textContent = 'Error al verificar caché';
             resetStatsUI();
         });
+}
+
+// Actualiza la interfaz de calificación
+function updateRatingUI(rating) {
+    const display = document.getElementById('rating-display');
+    const btnGood = document.getElementById('rate-good');
+    const btnBad = document.getElementById('rate-bad');
+
+    btnGood.classList.remove('active-rating');
+    btnBad.classList.remove('active-rating');
+
+    if (rating === 'good') {
+        display.textContent = 'Estado: ✅ Bueno';
+        display.style.color = '#28a745';
+        btnGood.classList.add('active-rating');
+    } else if (rating === 'bad') {
+        display.textContent = 'Estado: ❌ Malo';
+        display.style.color = '#dc3545';
+        btnBad.classList.add('active-rating');
+    } else {
+        display.textContent = 'Estado: Sin calificar';
+        display.style.color = '#3498db';
+    }
+}
+// Guarda la calificación del clip actual
+function saveRating(rating) {
+    if (!plays.length) return;
+
+    const clip = plays[currentClipIndex];
+    let newRating = rating;
+
+    // El botón "Limpiar" o "clear" en realidad guarda un rating de 'undefined' o lo omite
+    if (rating === 'clear') {
+        newRating = 'undefined';
+    }
+
+    const payload = {
+        start_ms: Math.round(clip.tiempo_inicio * 1000), // Enviar en milisegundos como el backend lo espera
+        rating: newRating === 'undefined' ? undefined : newRating // API espera 'good' o 'bad'
+    };
+
+    // 💡 Actualizar el objeto localmente para una respuesta inmediata
+    clip.rating = newRating === 'undefined' ? undefined : newRating;
+    updateRatingUI(clip.rating);
+
+    if (!currentVideoFilename) {
+        console.error('No hay video seleccionado para calificar');
+        return;
+    }
+
+    // El caso 'clear' requiere enviar la calificación como 'undefined' para que el backend la elimine.
+    // Pero como el backend sólo acepta 'good' o 'bad', asumiremos que 'clear' no envía el rating
+    // al servidor y solo actualizamos localmente si no es 'good' o 'bad'.
+
+    if (newRating !== 'good' && newRating !== 'bad') {
+        console.log('Calificación limpiada localmente. No se envía al servidor.');
+        return;
+    }
+
+    fetch(`/api/rating/${encodeURIComponent(currentVideoFilename)}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log(`Calificación ${data.rating} guardada con éxito para el clip.`);
+
+            // Si la calificación se guarda, también actualiza la calificación del clip en el array
+            // allPlays, ya que 'plays' es un subconjunto. Necesitas encontrar el clip en allPlays
+            // para que la caché del procesamiento se mantenga sincronizada.
+            const fullClip = allPlays.find(c => Math.round(c.tiempo_inicio * 1000) === payload.start_ms);
+            if(fullClip) fullClip.rating = data.rating;
+        } else {
+            alert('Error al guardar la calificación: ' + (data.error || 'Error desconocido'));
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('Error de conexión al guardar la calificación');
+    });
 }
 </script>
 {% endblock %}

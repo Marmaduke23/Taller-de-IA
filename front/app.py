@@ -232,5 +232,44 @@ def too_large(e):
     print('Error: El archivo es demasiado grande. El tamaño máximo es 100MB.')
     return redirect(url_for('index'))
 
+# API de Calificaciones (Ratings)
+@app.route('/api/rating/<video_filename>', methods=['POST'])
+def save_rating(video_filename):
+    """Guarda la calificación (bueno/malo) de un clip específico"""
+    try:
+        data = request.get_json() or {}
+        
+        # Parámetros para identificar el clip (usaremos el start_ms)
+        start_ms = data.get('start_ms')
+        rating = data.get('rating') # 'good' o 'bad'
+        
+        if start_ms is None or rating not in ['good', 'bad']:
+            return jsonify({'success': False, 'error': 'Parámetros inválidos'}), 400
+
+        processing_data = load_processing_data(video_filename)
+        
+        if not processing_data or not processing_data.get('samples'):
+            return jsonify({'success': False, 'error': 'Datos de procesamiento no encontrados'}), 404
+        
+        # Buscar el clip por tiempo de inicio (start_ms)
+        found = False
+        for sample in processing_data['samples']:
+            # La comparación debe ser estricta para asegurar que es el mismo clip
+            if sample.get('start_ms') == start_ms:
+                sample['rating'] = rating # Agregar/Actualizar la calificación
+                found = True
+                break
+        
+        if found:
+            filepath = get_json_file(PROCESSING_FOLDER, video_filename)
+            save_json_data(filepath, processing_data) # Guardar el JSON actualizado
+            return jsonify({'success': True, 'rating': rating})
+        else:
+            return jsonify({'success': False, 'error': 'Clip no encontrado'}), 404
+
+    except Exception as e:
+        print(f"Error al guardar calificación: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True)
