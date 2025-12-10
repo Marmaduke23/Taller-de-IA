@@ -92,6 +92,42 @@
                 </div>
             </div>
 
+            <!-- Estadísticas -->
+            <div class="form-group stats-card" id="stats-card" style="display: none;">
+                <h3 class="input-title">Estadísticas del partido 📊</h3>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-total">-</div>
+                        <div class="stat-label">Total jugadas detectadas</div>
+                    </div>
+                    <div class="stat-box dist-box">
+                        <div class="stat-label">Distribución por tipo</div>
+                        <table class="stats-table">
+                            <tr>
+                                <td>Saques</td>
+                                <td id="stat-saques">-</td>
+                            </tr>
+                            <tr>
+                                <td>Derechas</td>
+                                <td id="stat-derechas">-</td>
+                            </tr>
+                            <tr>
+                                <td>Reveses</td>
+                                <td id="stat-reveses">-</td>
+                            </tr>
+                            <tr>
+                                <td>Posición de espera</td>
+                                <td id="stat-espera">-</td>
+                            </tr>
+                            <tr>
+                                <td>Otros</td>
+                                <td id="stat-otros">-</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- Comentarios -->
             <div class="form-group" style="margin-top: auto;">
                 <label>Agregar Comentarios ✍️</label>
@@ -210,6 +246,49 @@
 #comments-container::-webkit-scrollbar-thumb {
     background: #888;
 }
+
+/* Estadísticas */
+.stats-card {
+    background: #f8fbff;
+    border: 1px solid #e1ecf7;
+    border-radius: 8px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    align-items: stretch;
+}
+
+.stat-box {
+    background: white;
+    border: 1px solid #d9e2ec;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 8px;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.stats-table td {
+    padding: 6px 4px;
+    color: #2c3e50;
+}
+
+.stats-table td:first-child {
+    font-weight: 600;
+}
 </style>
 
 {% endblock %}
@@ -219,6 +298,7 @@
 var plays = [];
 var currentClipIndex = 0;
 var currentVideoFilename = null;
+var statsSummary = null;
 const video = document.getElementById('videoPlayer');
 
 // Fetch para obtener clips desde la API
@@ -236,16 +316,19 @@ function fetchClipSegments(videoFile, nth = 10) {
         return response.json();
     })
     .then(data => {
-        if (data) {
-            plays = data.samples.map(item => ({
-                movimiento: item.cls.label || "desconocido",
-                tiempo_inicio: item.start_ms / 1000,
-                tiempo_fin: item.end_ms / 1000,
-                pose: item.pose.label
+        if (data && Array.isArray(data.samples)) {
+            const parsedPlays = data.samples.map(item => ({
+                movimiento: (item.cls && item.cls.label) ? item.cls.label : "desconocido",
+                tiempo_inicio: (item.start_ms || 0) / 1000,
+                tiempo_fin: (item.end_ms || 0) / 1000,
+                pose: item.pose ? item.pose.label : undefined
             }));
+            plays = parsedPlays;
             console.log('Plays:', plays);
+            return { apiData: data, plays: parsedPlays };
         } else {
             console.warn('Respuesta inesperada:', data);
+            return { apiData: data, plays: [] };
         }
     });
 }
@@ -257,6 +340,114 @@ async function fetchVideoFile(url) {
     return new File([blob], url.split('/').pop(), { type: blob.type });
 }
 
+// Normaliza y computa estadísticas
+const LABEL_KEYS = {
+    'serve': 'saques',
+    'saque': 'saques',
+    'service': 'saques',
+    'forehand': 'derechas',
+    'derecha': 'derechas',
+    'drive': 'derechas',
+    'backhand': 'reveses',
+    'reves': 'reveses',
+    'revés': 'reveses',
+    'ready_position': 'espera',
+    'wait': 'espera',
+    'waiting': 'espera',
+    'ready': 'espera',
+    'idle': 'espera',
+    'posicion de espera': 'espera',
+    'posición de espera': 'espera'
+};
+
+function normalizeLabel(label) {
+    if (!label) return 'otros';
+    const clean = label.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return LABEL_KEYS[clean] || 'otros';
+}
+
+function labelForDisplay(label) {
+    const key = normalizeLabel(label);
+    if (key === 'saques') return 'Saque';
+    if (key === 'derechas') return 'Derecha';
+    if (key === 'reveses') return 'Revés';
+    if (key === 'espera') return 'Posición de espera';
+    if (label) return label;
+    return 'Desconocido';
+}
+
+function computeStatsFromPlays(plays) {
+    const list = Array.isArray(plays) ? plays : [];
+    const distribution = {
+        saques: 0,
+        derechas: 0,
+        reveses: 0,
+        espera: 0,
+        otros: 0
+    };
+
+    list.forEach(play => {
+        const key = normalizeLabel(play.movimiento);
+        distribution[key] = (distribution[key] || 0) + 1;
+    });
+
+    return {
+        total: list.length,
+        distribution
+    };
+}
+
+function resetStatsUI() {
+    const card = document.getElementById('stats-card');
+    if (!card) return;
+    statsSummary = null;
+    card.style.display = 'none';
+    const ids = ['total', 'saques', 'derechas', 'reveses', 'espera', 'otros'];
+    ids.forEach(id => {
+        const el = document.getElementById(`stat-${id}`);
+        if (el) el.textContent = '-';
+    });
+}
+
+function updateStatsUI(stats) {
+    const card = document.getElementById('stats-card');
+    if (!card) return;
+
+    if (!stats || typeof stats.total === 'undefined') {
+        resetStatsUI();
+        return;
+    }
+
+    statsSummary = stats;
+    card.style.display = 'block';
+
+    document.getElementById('stat-total').textContent = stats.total;
+    const distribution = stats.distribution || {};
+    const distIds = ['saques', 'derechas', 'reveses', 'espera', 'otros'];
+    distIds.forEach(id => {
+        const el = document.getElementById(`stat-${id}`);
+        if (el) el.textContent = distribution[id] != null ? distribution[id] : 0;
+    });
+}
+
+function mapSampleToPlay(sample) {
+    if (sample && Object.prototype.hasOwnProperty.call(sample, 'movimiento')) {
+        return {
+            movimiento: sample.movimiento,
+            tiempo_inicio: sample.tiempo_inicio,
+            tiempo_fin: sample.tiempo_fin,
+            pose: sample.pose
+        };
+    }
+
+    return {
+        movimiento: (sample && sample.cls && sample.cls.label) ? sample.cls.label : 'desconocido',
+        tiempo_inicio: (sample && sample.start_ms ? sample.start_ms : 0) / 1000,
+        tiempo_fin: (sample && sample.end_ms ? sample.end_ms : 0) / 1000,
+        pose: sample && sample.pose ? sample.pose.label : undefined
+    };
+}
+
 // Función para reproducir clip actual
 function playCurrentClip() {
     if (!plays.length) return;
@@ -266,7 +457,7 @@ function playCurrentClip() {
     const end = clip.tiempo_fin;
 
     // Actualizar info de clip
-    document.getElementById('detail-type').textContent = clip.movimiento;
+    document.getElementById('detail-type').textContent = labelForDisplay(clip.movimiento);
     if(clip.pose){
         document.getElementById('detail-pose').textContent = clip.pose
     }else{
@@ -423,20 +614,20 @@ function deleteComment(commentId) {
 }
 
 // Guardar procesamiento en el servidor (después de fetch exitoso a API externa)
-function saveProcessingToServer(filename, playsData) {
-    const samples = playsData.map(play => ({
-        movimiento: play.movimiento,
-        tiempo_inicio: play.tiempo_inicio,
-        tiempo_fin: play.tiempo_fin,
-        pose: play.pose
-    }));
-    
+function saveProcessingToServer(filename, processingPayload) {
+    const payload = {
+        samples: processingPayload.samples || [],
+        fps: processingPayload.fps,
+        total_frames: processingPayload.total_frames,
+        summary: processingPayload.summary
+    };
+
     fetch(`/api/processing/${encodeURIComponent(filename)}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ samples: samples })
+        body: JSON.stringify(payload)
     })
     .then(response => response.json())
     .then(data => {
@@ -474,6 +665,7 @@ function loadVideo(videoUrl, filename, event) {
     // Limpiar clips anteriores
     plays = [];
     currentClipIndex = 0;
+    resetStatsUI();
     
     // Limpiar textarea de comentarios
     document.getElementById('comentarios').value = '';
@@ -494,12 +686,9 @@ function loadVideo(videoUrl, filename, event) {
                 console.log('📦 Video ya procesado, usando datos guardados');
                 document.getElementById('detail-ai').textContent = 'Cargado desde caché ⚡';
                 
-                plays = cacheData.data.samples.map(item => ({
-                    movimiento: item.movimiento,
-                    tiempo_inicio: item.tiempo_inicio,
-                    tiempo_fin: item.tiempo_fin,
-                    pose: item.pose
-                }));
+                const cachedSamples = cacheData.data && Array.isArray(cacheData.data.samples) ? cacheData.data.samples : [];
+                plays = cachedSamples.map(mapSampleToPlay);
+                updateStatsUI(cacheData.data.summary || computeStatsFromPlays(plays));
                 
                 if (plays.length) {
                     playCurrentClip();
@@ -515,14 +704,24 @@ function loadVideo(videoUrl, filename, event) {
                 // Obtener archivo y procesarlo con API externa
                 fetchVideoFile(videoUrl)
                     .then(videoFile => fetchClipSegments(videoFile))
-                    .then(() => {
+                    .then(result => {
+                        const parsedPlays = (result && result.plays) ? result.plays : [];
+                        plays = parsedPlays;
+                        const stats = computeStatsFromPlays(parsedPlays);
+                        updateStatsUI(stats);
+
                         // El fetch a la API externa fue EXITOSO
-                        if (plays.length) {
+                        if (parsedPlays.length) {
                             playCurrentClip();
                             document.getElementById('detail-ai').textContent = 'Analizado ✔️';
                             
                             // PASO 2: Guardar resultado en el servidor (solo si fue exitoso)
-                            saveProcessingToServer(filename, plays);
+                            saveProcessingToServer(filename, {
+                                samples: result && result.apiData ? (result.apiData.samples || []) : [],
+                                fps: result && result.apiData ? result.apiData.fps : undefined,
+                                total_frames: result && result.apiData ? result.apiData.total_frames : undefined,
+                                summary: stats
+                            });
                         } else {
                             document.getElementById('detail-ai').textContent = 'No se detectaron jugadas';
                         }
@@ -531,6 +730,7 @@ function loadVideo(videoUrl, filename, event) {
                         // El fetch a la API externa FALLÓ
                         console.error('❌ Error al procesar con API externa:', err);
                         document.getElementById('detail-ai').textContent = 'Error al analizar el video ❌';
+                        resetStatsUI();
                         // NO guardar nada si hubo error
                     });
             }
@@ -538,6 +738,7 @@ function loadVideo(videoUrl, filename, event) {
         .catch(err => {
             console.error('❌ Error al verificar caché en servidor:', err);
             document.getElementById('detail-ai').textContent = 'Error al verificar caché';
+            resetStatsUI();
         });
 }
 </script>

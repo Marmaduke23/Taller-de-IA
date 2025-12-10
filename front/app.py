@@ -75,13 +75,27 @@ def load_processing_data(video_filename):
     filepath = get_json_file(PROCESSING_FOLDER, video_filename)
     return load_json_data(filepath)
 
-def save_processing_data(video_filename, samples):
-    """Guarda los datos de procesamiento de un video"""
+def save_processing_data(video_filename, payload):
+    """Guarda los datos de procesamiento de un video incluyendo metadatos y resumen"""
+    samples = payload.get('samples', [])
+    summary = payload.get('summary')
+    fps = payload.get('fps')
+    total_frames = payload.get('total_frames')
+
     processing_data = {
         'video_filename': video_filename,
         'processed_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'samples': samples
     }
+
+    if fps is not None:
+        processing_data['fps'] = fps
+
+    if total_frames is not None:
+        processing_data['total_frames'] = total_frames
+
+    if summary:
+        processing_data['summary'] = summary
     
     filepath = get_json_file(PROCESSING_FOLDER, video_filename)
     save_json_data(filepath, processing_data)
@@ -200,13 +214,13 @@ def get_processing(video_filename):
 def save_processing(video_filename):
     """Guarda el resultado del procesamiento de un video"""
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         samples = data.get('samples', [])
         
         if not samples:
             return jsonify({'success': False, 'error': 'No hay datos para guardar'}), 400
         
-        processing_data = save_processing_data(video_filename, samples)
+        processing_data = save_processing_data(video_filename, data)
         return jsonify({'success': True, 'data': processing_data})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
