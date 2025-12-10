@@ -14,7 +14,7 @@
         "label": "good",
         "prob": 0.9296888113021851
       },
-      "rating": "good"
+      "rating": "bad"
     },
     {
       "frame_index": 10,
@@ -56,7 +56,7 @@
         "label": "good",
         "prob": 0.9873263239860535
       },
-      "rating": "bad"
+      "rating": "good"
     },
     {
       "frame_index": 70,

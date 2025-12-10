@@ -53,6 +53,17 @@
 
                 <!-- Video + Barra -->
                 <div class="form-group video-player-container" style="flex: 1;">
+    
+                    <div class="clip-filter-container" style="margin-bottom: 15px; width: 100%;">
+                        <label for="clipFilter" class="input-title" style="margin-bottom: 5px; display: block;">Filtrar Jugadas:</label>
+                        <select id="clipFilter" class="form-control" onchange="applyClipFilter(this.value)" style="width: 100%;">
+                            <option value="all">Todas las Jugadas</option>
+                            <option value="saques">Saques</option>
+                            <option value="derechas">Derechas (Forehands)</option>
+                            <option value="reveses">Reveses (Backhands)</option>
+                        </select>
+                    </div>
+
                     
                     <!-- Barra navegación -->
                     <div id="clip-nav" style="margin-bottom: 10px; display: flex; gap: 8px; align-items: center; width: 100%;">
@@ -318,11 +329,46 @@ var statsSummary = null;
 const video = document.getElementById('videoPlayer');
 
 // Función para filtrar clips de ready_position
-function filterReadyPositionClips(plays) {
+function filterPlays(plays, filterType = 'all') {
     return plays.filter(play => {
         const normalized = normalizeLabel(play.movimiento);
-        return normalized !== 'espera'; // Excluir clips de "espera" (ready_position)
+        
+        // 1. Siempre excluimos "espera" (ready_position)
+        if (normalized === 'espera') {
+            return false;
+        }
+
+        // 2. Aplicar el filtro seleccionado por el usuario
+        if (filterType === 'all') {
+            return true;
+        }
+
+        return normalized === filterType;
     });
+}
+
+// Aplica el filtro seleccionado y actualiza la lista de reproducción
+function applyClipFilter(filterType) {
+    if (!allPlays.length) return; // No hay clips totales para filtrar
+
+    // 1. Filtrar el conjunto total de clips (allPlays)
+    plays = filterPlays(allPlays, filterType);
+    
+    // 2. Reiniciar el índice de clip
+    currentClipIndex = 0;
+
+    // 3. Actualizar la interfaz del reproductor
+    if (plays.length) {
+        playCurrentClip();
+    } else {
+        // Mostrar mensaje si no hay clips para el filtro seleccionado
+        document.getElementById('clip-label').textContent = `0 clips encontrados para ${filterType.charAt(0).toUpperCase() + filterType.slice(1)}`;
+        // Opcional: Pausar el video y limpiar la info del clip
+        video.pause();
+        document.getElementById('detail-type').textContent = '-';
+        document.getElementById('detail-pose').textContent = '-';
+        updateRatingUI(undefined); // Limpiar la calificación
+    }
 }
 
 // Fetch para obtener clips desde la API
@@ -552,7 +598,7 @@ function displayComments(comments) {
     const container = document.getElementById('comments-container');
     
     if (comments.length === 0) {
-        container.innerHTML = '<div class="no-comments">No hay comentarios aún. ¡Sé el primero en comentar!</div>';
+        container.innerHTML = '<div class="no-comments">No hay comentarios aún. ¡Deja comentarios a tus alumnos sobre sus jugadas!</div>';
         return;
     }
     
@@ -684,6 +730,7 @@ function saveProcessingToServer(filename, processingPayload) {
 }
 
 // Función de carga de video
+// Función de carga de video
 function loadVideo(videoUrl, filename, event) {
     const placeholder = document.getElementById('placeholder');
     const videoContent = document.getElementById('video-content');
@@ -694,6 +741,9 @@ function loadVideo(videoUrl, filename, event) {
 
     // Guardar nombre del video actual
     currentVideoFilename = filename;
+    
+    // 💡 NUEVO: Reiniciar el selector de clips al valor por defecto
+    document.getElementById('clipFilter').value = 'all'; 
 
     // Actualizar nombre de video
     document.getElementById('detail-filename').textContent = filename;
@@ -734,8 +784,8 @@ function loadVideo(videoUrl, filename, event) {
                 // Guardar TODOS los clips para estadísticas
                 allPlays = mappedPlays;
                 
-                // Filtrar solo para el selector de clips (sin ready_position)
-                plays = filterReadyPositionClips(mappedPlays);
+                // 💡 MODIFICADO: Filtrar usando la función general con el valor por defecto 'all'
+                plays = filterPlays(mappedPlays, 'all'); 
                 
                 // Las estadísticas usan TODOS los clips (allPlays)
                 updateStatsUI(cacheData.data.summary || computeStatsFromPlays(allPlays));
@@ -755,18 +805,20 @@ function loadVideo(videoUrl, filename, event) {
                 fetchVideoFile(videoUrl)
                     .then(videoFile => fetchClipSegments(videoFile))
                     .then(result => {
-                        const parsedPlays = (result && result.plays) ? result.plays : [];
                         const allParsedPlays = (result && result.allPlays) ? result.allPlays : [];
                         
-                        plays = parsedPlays; // clips filtrados (sin ready_position)
-                        allPlays = allParsedPlays; // TODOS los clips (con ready_position)
+                        // Guardar TODOS los clips (con ready_position) para estadísticas y filtros
+                        allPlays = allParsedPlays; 
+                        
+                        // 💡 MODIFICADO: Aplicar el filtro por defecto 'all' a allPlays
+                        plays = filterPlays(allPlays, 'all'); 
                         
                         // Las estadísticas usan TODOS los clips
                         const stats = computeStatsFromPlays(allPlays);
                         updateStatsUI(stats);
 
                         // El fetch a la API externa fue EXITOSO
-                        if (parsedPlays.length) {
+                        if (plays.length) {
                             playCurrentClip();
                             document.getElementById('detail-ai').textContent = 'Analizado ✔️';
                             

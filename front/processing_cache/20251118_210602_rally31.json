@@ -272,7 +272,8 @@
       "pose": {
         "label": "bad",
         "prob": 0.9999513719812967
-      }
+      },
+      "rating": "good"
     },
     {
       "frame_index": 710,
